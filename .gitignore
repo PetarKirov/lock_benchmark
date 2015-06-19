@@ -1,0 +1,22 @@
+# Binaries
+bin/
+*.a
+*.lib
+*.exe
+*.o 
+*.obj
+*.dll
+
+# VisualD and Visual Studio
+*.sln
+*.suo
+*.visualdproj
+*.exe_cv
+*.pdb
+
+# DUB
+.dub/
+docs.json
+__dummy.html
+dub.selections.json
+dub.userprefs

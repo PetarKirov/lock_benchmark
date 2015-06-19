@@ -1,0 +1,37 @@
+{
+	"name": "lock_benchmark",
+	"description": "Comparison of different locking strategies",
+	"copyright": "Copyright © 2015, ZombineDev",
+	"authors": ["ZombineDev"],
+	"targetType" : "executable",
+	"targetPath": "bin/",
+	"dependencies": {
+	},
+
+	"configurations": [
+		{
+			"name": "win64",
+			"platforms": ["windows"],
+			"architecture": ["x86_64"],
+			"targetPath": "bin/Win64"
+		},
+		{
+			"name": "win32",
+			"platforms": ["windows"],
+			"architecture": ["x86"],
+			"targetPath": "bin/Win32"
+		},
+		{
+			"name": "linux64",
+			"platforms": ["linux"],
+			"architecture": ["x86_64"],
+			"targetPath": "bin/Linux64"
+		},
+		{
+			"name": "linux32",
+			"platforms": ["linux"],
+			"architecture": ["x86"],
+			"targetPath": "bin/Linux32"
+		},
+	]
+}
