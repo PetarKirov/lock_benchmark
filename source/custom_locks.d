@@ -1,4 +1,4 @@
-﻿module test_imports;
+﻿module custom_locks;
 
 import core.atomic;
 import core.sys.posix.pthread;
@@ -15,64 +15,63 @@ enum LockMechanism
 struct SpinLock(LockMechanism lockMech)
 {
     static if (lockMech != LockMechanism.posix)
+    {
         private shared uint the_lock = 0;
+    }
     else
+    {
         private __gshared pthread_spinlock_t the_lock;
+    }
 
     void initialize() shared
     {
         static if (lockMech == LockMechanism.posix)
             pthread_spin_init(&the_lock, 0);
     }
-
-    static if (lockMech == LockMechanism.cas_default)
+    
+    void lock() shared
     {
-        void lock() shared {
-            while(!cas(&the_lock, 0, 1)) {}
-        }
-
-        void unlock() shared {
-            atomicStore(the_lock, 0);
-        }
-    }
-    else static if (lockMech == LockMechanism.cas_mo_rel_unlock)
-    {
-        void lock() shared {
+        static if ( lockMech == LockMechanism.cas_default ||
+                    lockMech == LockMechanism.cas_mo_rel_unlock)
+        {
             while(!cas(&the_lock, 0, 1)) { }
         }
-        void unlock() shared {
-            atomicStore!(MemoryOrder.rel)(the_lock, 0);
+        else static if (lockMech == LockMechanism.cas_pause_lock_and_mo_rel_unlock)
+        {
+            while(!cas(&the_lock, 0, 1)) { asm { rep; nop; } }
         }
-    }
-    else static if (lockMech == LockMechanism.cas_pause_lock_and_mo_rel_unlock)
-    {
-        void lock() shared {
-            while(!cas(&the_lock, 0, 1)) {
-                asm { rep; nop; }
-            }
-        }
-        void unlock() shared {
-            atomicStore!(MemoryOrder.rel)(the_lock, 0);
-        }
-    }
-    else static if (lockMech == LockMechanism.posix)
-    {
-        void lock() shared {
+        else static if (lockMech == LockMechanism.posix)
+        {
             pthread_spin_lock(&this.the_lock);
         }
-        
-        void unlock() shared {
-            pthread_spin_unlock(&this.the_lock);
-        }
-    }
-    else static if (lockMech == LockMechanism.broken)
-    {
-        void lock() shared {
+        else static if (lockMech == LockMechanism.broken)
+        {
             while(the_lock != 0) { }
             the_lock = 1;
         }
-        
-        void unlock() shared {
+        else
+            static assert(0,
+                "Not supported or not implemented LockMechanism: " ~
+                lockMech.stringof);
+    }
+
+    void unlock() shared
+    {
+        static if (lockMech == LockMechanism.cas_default)
+        {
+            atomicStore(the_lock, 0);
+        }
+        else static if (lockMech == LockMechanism.cas_mo_rel_unlock ||
+                        lockMech == LockMechanism.cas_pause_lock_and_mo_rel_unlock)
+        {
+            atomicStore!(MemoryOrder.rel)(the_lock, 0);
+        }
+        else static if (lockMech == LockMechanism.posix)
+        {
+            pthread_spin_unlock(&this.the_lock);
+        }
+        else static if (lockMech == LockMechanism.broken)
+        {
             the_lock = 0;
         }
     }

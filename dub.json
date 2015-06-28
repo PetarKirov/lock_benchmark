@@ -8,6 +8,16 @@
 	"dependencies": {
 	},
 
+	"buildTypes": {
+		"debug": {
+			"buildOptions": ["debugMode", "debugInfo"]
+		},
+		"release_O5": {
+			"buildOptions": ["releaseMode", "optimize", "inline"],
+			"dflags-ldc": ["-O5"]
+		}
+	},
+
 	"configurations": [
 		{
 			"name": "win64",

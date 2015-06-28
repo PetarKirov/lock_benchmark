@@ -1,15 +1,19 @@
 ﻿module main;
 
-import std.stdio, std.concurrency, core.thread : thread_joinAll;
-import core.atomic, core.sync.mutex, core.sys.posix.pthread;
-import test_imports;
-
+import core.atomic : atomicOp;
+import core.sync.mutex : Mutex;
+import core.sys.posix.pthread;
+import core.thread : thread_joinAll;
+import std.concurrency : spawn;
 import std.conv : to;
-import std.datetime : benchmark;
+import std.datetime;// : benchmark, Clock;
 import std.string : format;
-import std.json;
+import std.json : JSONValue;
+import std.stdio : stdout, writeln, writefln, writef;
 import std.traits : EnumMembers;
 import std.typecons : staticIota;
+
+import custom_locks;
 
 enum LockPlacement
 {
@@ -141,13 +145,29 @@ void testBody(SyncApproach approach, T)
     }
 }
 
-void main()
+void main(string[] args)
 {
-    // writefln("Hello, from main thread: 0x%x", getCurrentThreadId);
+    import core.stdc.stdlib : exit;
 
-    ushort test_thread_count = 12;
-    size_t test_increments_count = 150_000;
-    uint test_repetitions_count = 20;
+    //2015-Jun-28 15:43:38.421941
+    auto start = SysTime.fromSimpleString("2015-Jun-28 15:43:38.421941");
+    auto end = SysTime.fromSimpleString("2015-Jun-28 15:45:21.603475");
+    writeln(end - start);
+
+
+    exit(0);
+
+	static import std.compiler;
+	writefln("%s Hello! This is test was comiled with %s v%s.%s and is running on %s",
+		Clock.currTime,
+		std.compiler.name,
+		std.compiler.version_major,
+		std.compiler.version_minor,
+		(void*).sizeof == 4? "32-bit" : "64-bit");
+
+    ushort test_thread_count = args.length > 1? args[1].to!ushort : 12;
+	size_t test_increments_count = args.length > 2? args[2].to!int : 150_000;
+	uint test_repetitions_count = args.length > 3? args[3].to!int : 20;
 
     JSONValue series = new JSONValue[0];
 
@@ -176,6 +196,8 @@ void main()
                         "TC: %2s, %5s %11s %21s: [".writef(curr_thread_count, placement, mechanism, approach);
                     else
                         "TC: %2s, %21s: [".writef(curr_thread_count, approach);
+
+					stdout.flush();
                     
                     auto result = benchmark!( {
                             testWith!(approach, placement, mechanism)
@@ -199,6 +221,8 @@ void main()
     }
 
     writeln(series.toPrettyString());
+
+    writefln("All done! The time is: %s", Clock.currTime);
 
     //readln();
 }
