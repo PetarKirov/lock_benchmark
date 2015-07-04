@@ -4,16 +4,18 @@ import core.atomic : atomicOp;
 import core.sync.mutex : Mutex;
 import core.sys.posix.pthread;
 import core.thread : thread_joinAll;
+import custom_locks;
 import std.concurrency : spawn;
 import std.conv : to;
-import std.datetime;// : benchmark, Clock;
-import std.string : format;
+import std.datetime : benchmark,Clock;
+import std.getopt;
 import std.json : JSONValue;
-import std.stdio : stdout, writeln, writefln, writef;
+import std.stdio : stdout,writeln,writefln,writef;
+import std.string : format;
 import std.traits : EnumMembers;
 import std.typecons : staticIota;
 
-import custom_locks;
+static import std.compiler;
 
 enum LockPlacement
 {
@@ -147,27 +149,35 @@ void testBody(SyncApproach approach, T)
 
 void main(string[] args)
 {
-    import core.stdc.stdlib : exit;
+	ushort test_thread_count = 12;
+	size_t test_increments_count = 150_000;
+	uint test_repetitions_count = 20;
 
-    //2015-Jun-28 15:43:38.421941
-    auto start = SysTime.fromSimpleString("2015-Jun-28 15:43:38.421941");
-    auto end = SysTime.fromSimpleString("2015-Jun-28 15:45:21.603475");
-    writeln(end - start);
+	auto cmdline_info = getopt(args, "thread_count|t", "Thread count - more threads, more contention. Example: lock_benchmark -t6.", &test_thread_count,
+		"increments_count|i", "Number of incrementations - size of workload. Example: lock_benchmark -i150000.", &test_increments_count,
+		"repetitions_count|r", "Repetitions count - improves average result stability. Example: lock_benchmark -r20.", &test_repetitions_count);
 
+	if (cmdline_info.helpWanted)
+	{
+		defaultGetoptFormatter(stdout.lockingTextWriter(), "Lock benchmark", cmdline_info.options);
+		writeln();
+		return;
+	}
 
-    exit(0);
+	auto start_time = Clock.currTime;
 
-	static import std.compiler;
-	writefln("%s Hello! This is test was comiled with %s v%s.%s and is running on %s",
-		Clock.currTime,
-		std.compiler.name,
-		std.compiler.version_major,
-		std.compiler.version_minor,
-		(void*).sizeof == 4? "32-bit" : "64-bit");
-
-    ushort test_thread_count = args.length > 1? args[1].to!ushort : 12;
-	size_t test_increments_count = args.length > 2? args[2].to!int : 150_000;
-	uint test_repetitions_count = args.length > 3? args[3].to!int : 20;
+	"Hello! lock_benchmark was comiled with %s v%s.%s and is running on %s.\n"
+	"The time is %s.\n"
+	"Thread count: %s, increments count: %s, repetitions count: %s."
+		.writefln(
+			std.compiler.name,
+			std.compiler.version_major,
+			std.compiler.version_minor,
+			(void*).sizeof == 4? "32-bit" : "64-bit",
+			start_time,
+			test_thread_count,
+			test_increments_count,
+			test_repetitions_count);
 
     JSONValue series = new JSONValue[0];
 
@@ -222,7 +232,8 @@ void main(string[] args)
 
     writeln(series.toPrettyString());
 
-    writefln("All done! The time is: %s", Clock.currTime);
+	auto end = Clock.currTime;
+	writefln("All done! The time is: %s\nTotal time: %s", end, end - start_time);
 
     //readln();
 }
